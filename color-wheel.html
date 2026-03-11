@@ -17,6 +17,13 @@
     gap:20px;
   }
   svg{cursor:pointer}
+  .wheels{
+    display:flex;
+    gap:24px;
+    align-items:center;
+    justify-content:center;
+    flex-wrap:wrap;
+  }
   .card{
     background:white;
     border-radius:12px;
@@ -71,18 +78,60 @@
     font-size:28px;
     text-align:center;
   }
+  .cardShow{
+    display:flex;
+    gap:24px;
+    align-items:flex-start;
+    justify-content:center;
+    flex-wrap:wrap;
+  }
+  .value-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    margin:6px 0;
+  }
+  .value-text{
+    flex:1;
+    min-width:0;
+    overflow-wrap:anywhere;
+  }
+  .copy-btn{
+    border:1px solid #d0d0d0;
+    background:#fff;
+    border-radius:6px;
+    padding:4px 8px;
+    font-size:12px;
+    cursor:pointer;
+  }
+  .copy-btn:hover{
+    background:#f6f6f6;
+  }
 </style>
 </head>
 <body>
 
-<svg id="wheel" width="320" height="320" viewBox="0 0 320 320"></svg>
+<div class="wheels">
+  <svg id="wheel" width="320" height="320" viewBox="0 0 320 320"></svg>
+  <svg id="wheel2" width="320" height="320" viewBox="0 0 320 320"></svg>
+</div>
+<div class="cardShow">
+    <div id="card" class="card" >
+    <div id="preview" class="color-preview"></div>
+  <div class="value-row"><span class="value-text"><span class="label">Name:</span> <span id="name"></span></span><button class="copy-btn" data-copy-target="name" type="button">Copy</button></div>
+  <div class="value-row"><span class="value-text"><span class="label">HEX:</span> <span id="hex"></span></span><button class="copy-btn" data-copy-target="hex" type="button">Copy</button></div>
+  <div class="value-row"><span class="value-text"><span class="label">HSL:</span> <span id="hsl"></span></span><button class="copy-btn" data-copy-target="hsl" type="button">Copy</button></div>
+  <div class="value-row"><span class="value-text"><span class="label">OKLCH:</span> <span id="oklch"></span></span><button class="copy-btn" data-copy-target="oklch" type="button">Copy</button></div>
+    </div>
 
-<div id="card" class="card" style="display:none">
-  <div id="preview" class="color-preview"></div>
-  <div><span class="label">Name:</span> <span id="name"></span></div>
-  <div><span class="label">HEX:</span> <span id="hex"></span></div>
-  <div><span class="label">HSL:</span> <span id="hsl"></span></div>
-  <div><span class="label">OKLCH:</span> <span id="oklch"></span></div>
+    <div id="card3" class="card" >
+    <div id="preview3" class="color-preview"></div>
+  <div class="value-row"><span class="value-text"><span class="label">Name:</span> <span id="name3"></span></span><button class="copy-btn" data-copy-target="name3" type="button">Copy</button></div>
+  <div class="value-row"><span class="value-text"><span class="label">HEX:</span> <span id="hex3"></span></span><button class="copy-btn" data-copy-target="hex3" type="button">Copy</button></div>
+  <div class="value-row"><span class="value-text"><span class="label">HSL:</span> <span id="hsl3"></span></span><button class="copy-btn" data-copy-target="hsl3" type="button">Copy</button></div>
+  <div class="value-row"><span class="value-text"><span class="label">OKLCH:</span> <span id="oklch3"></span></span><button class="copy-btn" data-copy-target="oklch3" type="button">Copy</button></div>
+    </div>
 </div>
 
 <div class="card combo-card">
@@ -100,6 +149,7 @@
   </div>
 </div>
 
+
 <script>
 const colors=[
 {name:"Red",hex:"#ff0000",hsl:"hsl(0,100%,50%)",oklch:"oklch(0.63 0.26 29)"},
@@ -116,7 +166,10 @@ const colors=[
 {name:"Violet",hex:"#8000ff",hsl:"hsl(270,100%,50%)",oklch:"oklch(0.53 0.29 293)"}
 ]
 
-const svg=document.getElementById("wheel")
+const wheels=[
+  document.getElementById("wheel"),
+  document.getElementById("wheel2")
+]
 const color1Input=document.getElementById("color1")
 const color2Input=document.getElementById("color2")
 const comboPreview=document.getElementById("comboPreview")
@@ -155,18 +208,172 @@ function slicePath(start,end){
   return `M ${cx} ${cy} L ${p1.x} ${p1.y} A ${r} ${r} 0 ${large} 1 ${p2.x} ${p2.y} Z`
 }
 
-colors.forEach((c,i)=>{
-  const start=i*30
-  const end=start+30
+function ringSlicePath(start,end,innerRadius,outerRadius){
+  const outerStart=polar(start,outerRadius)
+  const outerEnd=polar(end,outerRadius)
+  const innerEnd=polar(end,innerRadius)
+  const innerStart=polar(start,innerRadius)
+  const large=end-start>180?1:0
 
-  const path=document.createElementNS("http://www.w3.org/2000/svg","path")
-  path.setAttribute("d",slicePath(start,end))
-  path.setAttribute("fill",c.hex)
+  if(innerRadius===0){
+    return `M ${cx} ${cy} L ${outerStart.x} ${outerStart.y} A ${outerRadius} ${outerRadius} 0 ${large} 1 ${outerEnd.x} ${outerEnd.y} Z`
+  }
 
-  path.addEventListener("click",()=>showColor(c))
+  return `M ${outerStart.x} ${outerStart.y} A ${outerRadius} ${outerRadius} 0 ${large} 1 ${outerEnd.x} ${outerEnd.y} L ${innerEnd.x} ${innerEnd.y} A ${innerRadius} ${innerRadius} 0 ${large} 0 ${innerStart.x} ${innerStart.y} Z`
+}
 
-  svg.appendChild(path)
-})
+function toHex(value){
+  return value.toString(16).padStart(2,"0")
+}
+
+function hslToRgb(h,s,l){
+  const saturation=s/100
+  const lightness=l/100
+  const chroma=(1-Math.abs(2*lightness-1))*saturation
+  const segment=h/60
+  const x=chroma*(1-Math.abs(segment%2-1))
+  let r1=0
+  let g1=0
+  let b1=0
+
+  if(segment>=0&&segment<1){
+    r1=chroma
+    g1=x
+  }else if(segment>=1&&segment<2){
+    r1=x
+    g1=chroma
+  }else if(segment>=2&&segment<3){
+    g1=chroma
+    b1=x
+  }else if(segment>=3&&segment<4){
+    g1=x
+    b1=chroma
+  }else if(segment>=4&&segment<5){
+    r1=x
+    b1=chroma
+  }else{
+    r1=chroma
+    b1=x
+  }
+
+  const match=lightness-chroma/2
+
+  return {
+    r:Math.round((r1+match)*255),
+    g:Math.round((g1+match)*255),
+    b:Math.round((b1+match)*255)
+  }
+}
+
+function rgbToHex(r,g,b){
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`
+}
+
+function srgbToLinear(channel){
+  const value=channel/255
+  return value<=0.04045 ? value/12.92 : ((value+0.055)/1.055)**2.4
+}
+
+function rgbToOklch(r,g,b){
+  const rl=srgbToLinear(r)
+  const gl=srgbToLinear(g)
+  const bl=srgbToLinear(b)
+
+  const l=0.4122214708*rl+0.5363325363*gl+0.0514459929*bl
+  const m=0.2119034982*rl+0.6806995451*gl+0.1073969566*bl
+  const s=0.0883024619*rl+0.2817188376*gl+0.6299787005*bl
+
+  const lRoot=Math.cbrt(l)
+  const mRoot=Math.cbrt(m)
+  const sRoot=Math.cbrt(s)
+
+  const lightness=0.2104542553*lRoot+0.7936177850*mRoot-0.0040720468*sRoot
+  const a=1.9779984951*lRoot-2.4285922050*mRoot+0.4505937099*sRoot
+  const bChannel=0.0259040371*lRoot+0.7827717662*mRoot-0.8086757660*sRoot
+  const chroma=Math.sqrt(a*a+bChannel*bChannel)
+  const hue=(Math.atan2(bChannel,a)*180/Math.PI+360)%360
+
+  return `oklch(${lightness.toFixed(2)} ${chroma.toFixed(2)} ${hue.toFixed(0)})`
+}
+
+function createHueColor(hue){
+  const hsl=`hsl(${hue},100%,50%)`
+  const rgb=hslToRgb(hue,100,50)
+
+  return {
+    name:`Hue ${hue}°`,
+    hex:rgbToHex(rgb.r,rgb.g,rgb.b),
+    hsl,
+    oklch:rgbToOklch(rgb.r,rgb.g,rgb.b)
+  }
+}
+
+function createLuminanceColor(hue,lightness,bandLabel){
+  const roundedLightness=Math.round(lightness)
+  const hsl=`hsl(${hue},100%,${roundedLightness}%)`
+  const rgb=hslToRgb(hue,100,roundedLightness)
+
+  return {
+    name:`Hue ${hue}° ${bandLabel}`,
+    hex:rgbToHex(rgb.r,rgb.g,rgb.b),
+    hsl,
+    oklch:rgbToOklch(rgb.r,rgb.g,rgb.b)
+  }
+}
+
+function getLuminanceBandLabel(position){
+  if(position<0.33){
+    return "Shade"
+  }
+
+  if(position>0.66){
+    return "Tint"
+  }
+
+  return "Tone"
+}
+
+function renderWheel(svg,wheelColors,step){
+  wheelColors.forEach((c,i)=>{
+    const start=i*step
+    const end=start+step
+
+    const path=document.createElementNS("http://www.w3.org/2000/svg","path")
+    path.setAttribute("d",slicePath(start,end))
+    path.setAttribute("fill",c.hex)
+
+    path.addEventListener("click",()=>showColor(c))
+
+    svg.appendChild(path)
+  })
+}
+
+function renderLuminanceWheel(svg){
+  const rings=18
+  const step=1
+
+  for(let ringIndex=0;ringIndex<rings;ringIndex++){
+    const innerRadius=(r/rings)*ringIndex
+    const outerRadius=(r/rings)*(ringIndex+1)
+    const position=(ringIndex+0.5)/rings
+    const lightness=12+position*76
+    const bandLabel=getLuminanceBandLabel(position)
+
+    for(let hue=0;hue<360;hue+=step){
+      const color=createLuminanceColor(hue,lightness,bandLabel)
+      const path=document.createElementNS("http://www.w3.org/2000/svg","path")
+      path.setAttribute("d",ringSlicePath(hue,hue+step,innerRadius,outerRadius))
+      path.setAttribute("fill",color.hex)
+
+      path.addEventListener("click",()=>showLuminanceColor(color))
+
+      svg.appendChild(path)
+    }
+  }
+}
+
+renderWheel(wheels[0],colors,30)
+renderLuminanceWheel(wheels[1])
 
 function showColor(c){
   document.getElementById("card").style.display="block"
@@ -176,6 +383,61 @@ function showColor(c){
   document.getElementById("hsl").textContent=c.hsl
   document.getElementById("oklch").textContent=c.oklch
 }
+
+function showLuminanceColor(c){
+  document.getElementById("card3").style.display="block"
+  document.getElementById("preview3").style.background=c.hex
+  document.getElementById("name3").textContent=c.name
+  document.getElementById("hex3").textContent=c.hex
+  document.getElementById("hsl3").textContent=c.hsl
+  document.getElementById("oklch3").textContent=c.oklch
+}
+
+async function copyText(text){
+  if(navigator.clipboard&&window.isSecureContext){
+    await navigator.clipboard.writeText(text)
+    return
+  }
+
+  const temp=document.createElement("textarea")
+  temp.value=text
+  temp.style.position="fixed"
+  temp.style.left="-9999px"
+  document.body.appendChild(temp)
+  temp.focus()
+  temp.select()
+  document.execCommand("copy")
+  temp.remove()
+}
+
+document.querySelector(".cardShow").addEventListener("click",async(event)=>{
+  const button=event.target.closest(".copy-btn")
+
+  if(!button){
+    return
+  }
+
+  const targetId=button.getAttribute("data-copy-target")
+  const target=document.getElementById(targetId)
+  const value=target ? target.textContent.trim() : ""
+
+  if(!value){
+    return
+  }
+
+  const originalText=button.textContent
+
+  try{
+    await copyText(value)
+    button.textContent="Copied"
+  }catch(error){
+    button.textContent="Failed"
+  }
+
+  setTimeout(()=>{
+    button.textContent=originalText
+  },1000)
+})
 
 color1Input.addEventListener("input",updateCombo)
 color2Input.addEventListener("input",updateCombo)
