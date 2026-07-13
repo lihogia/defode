@@ -72,6 +72,7 @@
     padding:16px;
     box-sizing:border-box;
     transition:background-color 0.2s ease, color 0.2s ease;
+    border:4px solid;
   }
   .combo-preview h1{
     margin:0;
@@ -136,12 +137,16 @@
 
 <div class="card combo-card">
   <div class="field">
-    <label class="label" for="color1">Color #1</label>
+    <label class="label" for="color1">Color #1 - Border color</label>
     <input id="color1" type="text" value="#4f46e5" placeholder="#4f46e5 or hsl(250 73% 59%) or oklch(0.57 0.2 277)" />
   </div>
   <div class="field">
-    <label class="label" for="color2">Color #2</label>
-    <input id="color2" type="text" value="#ffffff" placeholder="#ffffff or hsl(0 0% 100%) or oklch(1 0 0)" />
+    <label class="label" for="color1">Color #2 - Background color</label>
+    <input id="color2" type="text" value="#4f46e5" placeholder="#4f46e5 or hsl(250 73% 59%) or oklch(0.57 0.2 277)" />
+  </div>
+  <div class="field">
+    <label class="label" for="color2">Color #3 - Text color</label>
+    <input id="color3" type="text" value="#ffffff" placeholder="#ffffff or hsl(0 0% 100%) or oklch(1 0 0)" />
   </div>
   <p class="hint">Use any valid CSS color value, including HEX, HSL, or OKLCH.</p>
   <div id="comboPreview" class="combo-preview">
@@ -172,6 +177,7 @@ const wheels=[
 ]
 const color1Input=document.getElementById("color1")
 const color2Input=document.getElementById("color2")
+const color3Input=document.getElementById("color3")
 const comboPreview=document.getElementById("comboPreview")
 const comboTitle=document.getElementById("comboTitle")
 const cx=160
@@ -185,15 +191,20 @@ function isValidColor(value){
 function updateCombo(){
   const color1=color1Input.value.trim()
   const color2=color2Input.value.trim()
+  const color3=color3Input.value.trim()
 
   const color1Valid=isValidColor(color1)
   const color2Valid=isValidColor(color2)
+  const color3Valid=isValidColor(color3)
 
   color1Input.classList.toggle("invalid", !color1Valid)
   color2Input.classList.toggle("invalid", !color2Valid)
+  color3Input.classList.toggle("invalid", !color3Valid)
 
-  comboPreview.style.background=color1Valid ? color1 : "#e5e7eb"
-  comboTitle.style.color=color2Valid ? color2 : "#111827"
+  comboPreview.style.borderColor=color1Valid ? color1 : "#ffbf00"
+  comboPreview.style.background=color2Valid ? color2 : "#e5e7eb"
+  comboTitle.style.color=color3Valid ? color3 : "#111827"
+  
 }
 
 function polar(angle, radius){
@@ -441,6 +452,8 @@ document.querySelector(".cardShow").addEventListener("click",async(event)=>{
 
 color1Input.addEventListener("input",updateCombo)
 color2Input.addEventListener("input",updateCombo)
+color3Input.addEventListener("input",updateCombo)
+
 
 updateCombo()
 </script>
